@@ -1,0 +1,28 @@
+#gameContainer {
+    display: flex;
+    justify-content: flex-end;
+};
+
+#gameCanvas {
+    display: flex;
+    justify-content: center;
+}
+#roomsList {
+    width: 25%;
+};
+
+#gameCanvas {
+    width: 75%;
+}
+
+#playerName {
+    width: 300px;
+}
+
+.w3-card-4 {
+    margin-bottom: 12px;
+}
+
+.w3-cell {
+    padding: 10px;
+}
