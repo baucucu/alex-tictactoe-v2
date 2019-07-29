@@ -1,6 +1,7 @@
 (function init() {
     // const socket = io.connect('http://tic-tac-toe-realtime.herokuapp.com'),
     const socket = io.connect('http://localhost:5500');
+    console.dir(socket);
 
     let rooms;
     let player = {
@@ -11,6 +12,7 @@
     };
 
     socket.on('syncScreens', (data) => {
+        console.dir("sync screen has been received", data);
         rooms = data;
         let roomsHTML = '<button class="w3-btn w3-blue" id="createRoom">Create room</button>';
         
@@ -20,8 +22,9 @@
 
                 roomsHTML += `
                 <div id="${room.roomName}" class="w3-card-4">
-                    <header class="w3-container w3-blue-grey">
-                        <h4>${room.roomName}</h4>
+                    <header class="w3-container w3-blue-grey w3-bar">
+                        <h4 w3-left w3-button w3-bar-item>${room.roomName}</h4>
+                        <button class="w3-right w3-bar-item w3-button" id="deleteRoom-${room.roomName}">x</button>
                     </header>
                     <div class="w3-cell-row">
 
@@ -58,13 +61,22 @@
                 $(`#${room.roomName}-playerxquit`).click(() => {
                     socket.emit('playerQuit', {player: player, roomName: room.roomName, type:"X" })
                 });
+                
+                $(`#deleteRoom-${room.roomName}`).on("click", function() {
+                    console.log("delete room requested");
+                    socket.emit('deleteRoom', {roomName: room.roomName});
+                });
             })
 
             $('#createRoom').click( ()=> {
                 socket.emit('createRoom');
             });
+
+            
         }
     });
+
+    
     
     $('form').submit( function(event) {
         event.preventDefault();

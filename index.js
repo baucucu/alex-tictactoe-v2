@@ -9,10 +9,11 @@ const io = require('socket.io').listen(server);
 app.use(express.static('.'));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'game.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 let rooms = require('./rooms');
+let connections = [];
 
 io.on('connection', function(socket) {
 
@@ -110,6 +111,17 @@ io.on('connection', function(socket) {
             }
         });
         io.emit('syncScreens', rooms);
+    });
+
+    socket.on('deleteRoom', (data) => {
+        console.log("delete room received: ", data.roomName);
+        let newRooms = rooms.filter(room => {
+            return room.roomName != data.roomName
+        });
+        rooms = newRooms;
+        console.log("rooms: ", rooms);
+        console.log(data.roomName, " has been deleted by ", connection.playerName);
+        io.emit('syncScreens', rooms);    
     });
 });
 

@@ -1,0 +1,33 @@
+<!doctype html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+        <title>Tic Tac Toe</title>
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <link rel="stylesheet" href="game.css">
+    <body>
+        <h1 id="welcome">Welcome </h1>
+        
+        <form id="playerName" class="w3-container">
+            <fieldset>
+                <legend>Enter your name</legend>
+                <input id="playerNameInput" class="w3-input w3-border" type="text" placeholder="Name">
+                <button id="submitName" type="submit" class="w3-btn w3-blue">Submit</button>
+            </fieldset>
+        </form>
+        <div id="gameContainer">
+            <div id="gameCanvas">
+                <h1>game canvas</h1>
+            </div>
+            <div id="roomsList"></div>
+        </div>
+        <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="client.js"></script>
+    </body>
+    </html>
+
+
+
