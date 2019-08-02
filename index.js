@@ -13,47 +13,107 @@ app.get('/', (req, res) => {
 });
 
 let rooms = require('./rooms');
-let connections = [];
+let players = [];
 
 io.on('connection', function(socket) {
 
-    let connection = {
+    socket.on("PING", () => {
+        setTimeout(socket.emit("PONG"),5000);
+    });
+    
+    let player = {
         id: "",
+        status: "visitor",
         playerName: "",
         room: "",
         type: ""
     };
 
     // ## Send the rooms list to the new connected client
-    io.emit('syncScreens', rooms);
+    io.emit('syncScreens', {rooms, player});
 
     io.clients((error, clients) => {
         if (error) throw error;
-        connection.id = clients[clients.length-1];
+        player.id = clients[clients.length-1];
 
-        console.log(`A visitor [ ${connection.id} ] has connected!`);
+        console.log(`${player.status} [ ${player.id} ] has connected!`);
         console.log("Clients: "+clients); // => [6em3d4TJP8Et9EMNAAAA, G5p55dHhGgUnLUctAAAB]
       });
 
     socket.on('disconnect', function(){
-        let user = connection.playerName.length > 0 
-            ? 
-                connection.playerName + `[ ${connection.id} ]`
-            : 
-                `A visitor [ ${connection.id} ]`;
-        console.log(user+" has disconnected!");
+
+        rooms.forEach( room => {
+            if(room.playerX.playerName == player.playerName && room.playerX.playerName !== "") {
+                room.playerX.playerName = ""
+                room.playerX.seatStatus = "empty"
+                room.players -= 1;
+            }
+            if(room.player0.playerName == player.playerName && room.player0.playerName !== "") {
+                room.player0.playerName = ""
+                room.player0.seatStatus = "empty"
+                room.players -= 1;
+            }
+        });
+
+        let newPlayers = players.filter(p => {
+            return p.playerName != player.playerName
+        });
+        players = newPlayers;
+
+        
+
+        console.log(`${player.status} [ ${player.id} ] ${player.playerName}` + " has disconnected!");
+        console.log("Players: ", players);
     });
 
+
     socket.on('playerName', (data) => {
-        let message = connection.playerName == "" ? `A visitor [ ${connection.id} ] has set name to ` + data.playerName : connection.playerName + `[ ${connection.id} ] has changed name to ` + data.playerName;
-        console.log(message);
-        connection.playerName = data.playerName;
+
+        let message = `${player.status} [ ${player.id} ] ${player.playerName}` 
+        message += player.status == "visitor" ? " has set name to " : " has changed name to ";
+        message += data.playerName;
+
+        let playerCheck = players.filter( p => {
+            return p.playerName == data.playerName;
+        })[0];
+
+        let socketCheck = players.filter( p => {
+            return p.id == data.player.id;
+        });
+    
+        if(playerCheck) {
+            console.log("Player name already exists");
+            socket.emit('nameTaken');
+        }
+        else {
+            player.status = "user";
+
+            rooms.forEach(room => {
+                if(room.playerX.playerName == player.playerName  && player.playerName !== ""){
+                    room.playerX.playerName = data.playerName;
+                }
+                if(room.player0.playerName == player.playerName && player.playerName !== ""){
+                    room.player0.playerName = data.playerName;
+                }
+            });
+
+            player.playerName = data.playerName;
+            
+            if(socketCheck.length == 0) {players.push(player)};
+
+            io.emit('syncScreens', {rooms, player});
+            socket.emit('nameSet', {name: player.playerName});
+            
+            console.log("Players: ", players);
+            console.log(message);
+        }
     });
 
     socket.on('createRoom', () =>{
         let newRoom = {
             "roomName": `room-${rooms.length+1}`,
             "roomStatus": "empty",
+            "owner":player.playerName,
             "players": 0,
             "playerX": {
                 "playerName": "",
@@ -67,51 +127,69 @@ io.on('connection', function(socket) {
             }
         }   
         rooms.push(newRoom);
-        let message = connection.playerName.length > 0 ? `Player ${connection.playerName} `  : `A visitor `;
-        message += `[ ${connection.id} ] has created ` + newRoom.roomName;
+        let message = player.playerName.length > 0 ? `Player ${player.playerName} `  : `A visitor `;
+        message += `[ ${player.id} ] has created ` + newRoom.roomName;
         console.log(message);
-        io.emit('syncScreens', rooms);
+        io.emit('syncScreens', {rooms, player});
     });
 
+
     socket.on('playerJoin', (data) => {
-        
-        connection.room = data.roomName;
-        connection.type = data.type;
+        console.log("data: ", data);
+
+        let requestedRoom = rooms.filter(room => {return room.roomName == data.roomName});
+        console.log("Requested room: ",requestedRoom);
+
+        let playerNumberCheck = requestedRoom[0].players;
+
+        console.log(" Players in room: ", playerNumberCheck);
+        console.log("agree: ", data.agree);
+
+        if( playerNumberCheck == 1 && !data.agree) {
+            socket.to(`${data.roomName}`).emit('agreeJoin', {player: data.player, roomName: data.roomName, type: data.type , id: data.id});
+            return;
+        }
+
+        player.room = data.roomName;
+        player.type = data.type;
 
         if( !io.sockets.adapter.rooms[data.roomName] || io.sockets.adapter.rooms[data.roomName].length === 1 ){
             if(data.player.playerName.length > 0){
                 socket.join(data.roomName);
-                console.log("Player " + connection.playerName + ` [ ${connection.id} ]  has joined ` + data.roomName);
+                console.log("Player " + player.playerName + ` [ ${player.id} ]  has joined ` + data.roomName);
                 rooms.forEach(room => {
                     if(room.roomName == data.roomName){
                         room[`player${data.type}`].playerName = data.player.playerName
                         room[`player${data.type}`].seatStatus = "waiting"
+                        room.players += 1;
                     }
                 });
-                io.emit('syncScreens', rooms);
+                io.emit('syncScreens', {rooms, player});
             }
         }
-
-    //    ## Get a list of all open rooms in socket.io
-    //    console.log("Rooms: ",io.sockets.adapter.rooms);
-    //    console.log(rooms);
     });
+
+
+
 
     socket.on('playerQuit', (data) => {
         console.log(data.player.playerName + " wants to quit " + data.roomName);
-        connection.room = "";
-        connection.type = "";
+        player.room = "";
+        player.type = "";
         socket.leave(data.roomName);
-        console.log("Player " + connection.playerName + ` [ ${connection.id} ] has left ` + data.roomName);
+        console.log("Player " + player.playerName + ` [ ${player.id} ] has left ` + data.roomName);
         
         rooms.forEach(room => {
             if(room.roomName == data.roomName){
                 room[`player${data.type}`].playerName = ""
                 room[`player${data.type}`].seatStatus = "empty"
+                room.players -= 1;
             }
         });
-        io.emit('syncScreens', rooms);
+        io.emit('syncScreens', {rooms, player});
     });
+
+
 
     socket.on('deleteRoom', (data) => {
         console.log("delete room received: ", data.roomName);
@@ -119,9 +197,9 @@ io.on('connection', function(socket) {
             return room.roomName != data.roomName
         });
         rooms = newRooms;
-        console.log("rooms: ", rooms);
-        console.log(data.roomName, " has been deleted by ", connection.playerName);
-        io.emit('syncScreens', rooms);    
+        // console.log("rooms: ", rooms);
+        console.log(data.roomName, " has been deleted by ", player.playerName);
+        io.emit('syncScreens', {rooms,player});    
     });
 });
 

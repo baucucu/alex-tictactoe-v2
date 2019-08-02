@@ -2,6 +2,7 @@ module.exports = [
         {
             "roomName": "room-1",
             "roomStatus": "empty",
+            "owner":"system",
             "players": 0,
             "playerX": {
                 "playerName": "",
@@ -18,6 +19,7 @@ module.exports = [
         {
             "roomName": "room-2",
             "roomStatus": "empty",
+            "owner":"system",
             "players": 0,
             "playerX": {
                 "playerName": "",
@@ -34,6 +36,7 @@ module.exports = [
         {
             "roomName": "room-3",
             "roomStatus": "empty",
+            "owner":"system",
             "players": 0,
             "playerX": {
                 "playerName": "",
